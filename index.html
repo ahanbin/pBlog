@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>个人网站</title>
+    <!-- 引入Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- 在Vue.js后引入marked -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 代码高亮支持 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+    <link rel="stylesheet" href="style/main.css">
+</head>
+<body>
+<div id="app">
+    <!-- 头部 -->
+    <header>
+        <h1>老韩的网站</h1>
+        <p>分享能分享的一切事物</p>
+    </header>
+    <!-- 导航 -->
+    <nav v-if="currentView === 'list'">
+        <ul>
+            <li v-for="category in categories"
+                :class="{ active: activeCategory === category }"
+                @click="filterByCategory(category)">
+                {{ category }}
+            </li>
+        </ul>
+    </nav>
+    <!-- 返回按钮（文章详情页显示） -->
+    <button v-if="currentView === 'article'" @click="currentView = 'list'" class="back-button">
+        ← 返回文章列表
+    </button>
+    <!-- 文章列表 -->
+    <section v-if="currentView === 'list'" id="article-list">
+        <div v-for="article in filteredArticles" class="article-card">
+<!--            <div class="article-image">-->
+<!--                {{ article.title.substring(0, 10) }}-->
+<!--            </div>-->
+            <div class="article-content">
+                <h2>
+                    <a href="#" @click.prevent="renderMarkdown(article.path)">
+                        {{ article.title }}
+                    </a>
+                </h2>
+                <div class="article-meta">
+                    <span>{{ article.category }}</span>
+                    <span>{{ formatDate(article.lastModified) }}</span>
+                </div>
+                <p class="article-excerpt">{{ article.excerpt || '点击阅读全文...' }}</p>
+                <a href="#" @click.prevent="renderMarkdown(article.path)" class="read-more">阅读全文</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 在文章列表下方添加分页导航 -->
+    <div v-if="currentView === 'list' && totalPages > 1" class="pagination">
+        <button @click="setPage(currentPage - 1)" :disabled="currentPage === 1">上一页</button>
+        <span v-for="page in totalPages" :key="page">
+            <button @click="setPage(page)" :class="{ active: page === currentPage }">
+                {{ page }}
+            </button>
+        </span>
+        <button @click="setPage(currentPage + 1)" :disabled="currentPage === totalPages">下一页</button>
+    </div>
+
+    <!-- 文章详情 -->
+    <section v-if="currentView === 'article'" class="article-detail">
+        <div class="article-header">
+            <h1>{{ currentArticle.title }}</h1>
+            <div class="article-meta-large">
+                <span>分类：{{ currentArticle.category }}</span>
+                <span>更新：{{ formatDate(currentArticle.lastModified) }}</span>
+            </div>
+        </div>
+        <div class="markdown-body" v-html="articleContent"></div>
+    </section>
+    <!-- 页脚 -->
+    <footer>
+        <p>© 2025 我的个人博客 | 使用Vue.js和Marked.js构建</p>
+    </footer>
+</div>
+
+<script>
+    const { Vue } = window;
+
+    // 配置 marked
+    marked.setOptions({
+        highlight: function(code, lang) {
+            const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+            return hljs.highlight(code, { language }).value;
+        },
+        langPrefix: 'hljs language-'
+    });
+
+    new Vue({
+        el: '#app',
+        data: {
+            articles: [],
+            categories: [],
+            activeCategory: '首页',
+            currentView: 'list',
+            articleContent: '',
+            currentArticle: {},
+            itemsPerPage: 5, // 每页显示的文章数量
+            currentPage: 1 // 当前页码
+        },
+        computed: {
+            filteredArticles() {
+                if (this.activeCategory === '首页') {
+                    return this.articles;
+                }
+                return this.articles.filter(article => article.category === this.activeCategory);
+            },
+            paginatedArticles() {
+                const start = (this.currentPage - 1) * this.itemsPerPage;
+                const end = start + this.itemsPerPage;
+                return this.filteredArticles.slice(start, end);
+            },
+            totalPages() {
+                return Math.ceil(this.filteredArticles.length / this.itemsPerPage);
+            }
+        },
+        methods: {
+            filterByCategory(category) {
+                this.activeCategory = category;
+                this.currentPage = 1; // 切换分类时重置页码
+            },
+            formatDate(date) {
+                return new Date(date).toLocaleDateString();
+            },
+            async renderMarkdown(path) {
+                try {
+                    console.log('尝试加载文章路径:', path);
+                    const response = await fetch(path);
+                    if (!response.ok) {
+                        throw new Error(`HTTP 错误! 状态码: ${response.status}`);
+                    }
+                    const markdown = await response.text();
+                    this.articleContent = DOMPurify.sanitize(marked.parse(markdown));
+                    this.currentArticle = this.articles.find(article => article.path === path);
+                    this.currentView = 'article';
+                } catch (error) {
+                    console.error('加载文章内容失败:', error);
+                    alert(`加载文章失败: ${error.message}`);
+                }
+            },
+            async loadArticles() {
+                try {
+                    const response = await fetch('data/article.json');
+                    const data = await response.json();
+
+                    this.articles = data.sort((a, b) =>
+                        new Date(b.lastModified) - new Date(a.lastModified)
+                    );
+
+                    const allCategories = [...new Set(data.map(a => a.category))];
+                    this.categories = ['首页', ...allCategories];
+                } catch (error) {
+                    console.error('加载文章失败:', error);
+                }
+            },
+            setPage(page) {
+                if (page >= 1 && page <= this.totalPages) {
+                    this.currentPage = page;
+                }
+            }
+        },
+        mounted() {
+            this.loadArticles();
+        }
+    });
+</script>
+</body>
+</html>
