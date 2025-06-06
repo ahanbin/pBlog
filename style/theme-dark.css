@@ -1,11 +1,11 @@
-/* 基础样式 */
+/* theme-dark.css */
 :root {
-    --primary-color: #4a6cf7;
-    --secondary-color: #6c757d;
-    --light-color: #f8f9fa;
-    --dark-color: #343a40;
+    --primary-color: #5d6d7e;
+    --secondary-color: #ced4da;
+    --light-color: #2d3436;
+    --dark-color: #ffffff;
     --border-radius: 8px;
-    --box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    --box-shadow: 0 5px 15px rgba(255,255,255,0.05);
     --transition: all 0.3s ease;
 }
 
@@ -18,8 +18,8 @@
 body {
     font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     line-height: 1.6;
-    color: #333;
-    background-color: #f8f9fa;
+    color: #ddd;
+    background-color: #1a1a1a;
     padding: 0;
     margin: 0;
 }
@@ -30,9 +30,8 @@ body {
     padding: 0 20px;
 }
 
-/* 头部样式 */
 header {
-    background: linear-gradient(135deg, #4a6cf7, #6a11cb);
+    background: linear-gradient(135deg, #5d6d7e, #37474f);
     color: white;
     padding: 2rem 0;
     text-align: center;
@@ -54,9 +53,8 @@ header p {
     margin: 0 auto;
 }
 
-/* 导航菜单 */
 nav {
-    background: white;
+    background: #2d3436;
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
     margin-bottom: 2rem;
@@ -73,64 +71,48 @@ nav ul {
 
 nav li {
     padding: 8px 20px;
-    background: #eef2ff;
+    background: #3a3a3a;
     border-radius: 30px;
     cursor: pointer;
     transition: var(--transition);
     font-weight: 500;
+    color: #eee;
 }
 
-nav li:hover, nav li.active {
+nav li:hover,
+nav li.active {
     background: var(--primary-color);
     color: white;
     transform: translateY(-2px);
 }
 
-/* 文章列表 */
-#article-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 3rem;
-}
-
 .article-card {
-    background: white;
+    background: #2d3436;
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: var(--box-shadow);
     transition: var(--transition);
     display: flex;
     flex-direction: column;
-    height: auto; /* 改为 auto，让卡片自适应内容 */
+    height: auto;
 }
 
 .article-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-}
-
-.article-image {
-    height: 120px; /* 调整高度 */
-    background: linear-gradient(45deg, #6a11cb, #4a6cf7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.5rem; /* 字体略小以适配新高度 */
-    font-weight: bold;
+    box-shadow: 0 10px 25px rgba(255,255,255,0.1);
 }
 
 .article-content {
-    padding: 1rem; /* 减少内边距 */
+    padding: 1rem;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
 }
 
 .article-content h2 {
-    margin-bottom: 0.5rem; /* 适当减少间距 */
-    font-size: 1.2rem; /* 更紧凑的标题 */
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    color: var(--dark-color);
 }
 
 .article-content h2 a {
@@ -152,15 +134,15 @@ nav li:hover, nav li.active {
 }
 
 .article-excerpt {
-    margin-bottom: 1rem; /* 原为 1.5rem */
+    margin-bottom: 1rem;
     flex-grow: 1;
-    color: #555;
+    color: #aaa;
 }
 
 .read-more {
     display: inline-block;
     padding: 8px 20px;
-    background: #eef2ff;
+    background: #3a3a3a;
     color: var(--primary-color);
     border-radius: 30px;
     text-decoration: none;
@@ -174,7 +156,6 @@ nav li:hover, nav li.active {
     color: white;
 }
 
-/* 分页 */
 .pagination {
     display: flex;
     justify-content: center;
@@ -185,11 +166,12 @@ nav li:hover, nav li.active {
 
 .pagination button {
     padding: 8px 15px;
-    background: #eef2ff;
+    background: #3a3a3a;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s;
+    color: white;
 }
 
 .pagination button:hover {
@@ -198,7 +180,7 @@ nav li:hover, nav li.active {
 }
 
 .pagination button:disabled {
-    background: #ddd;
+    background: #555;
     cursor: not-allowed;
 }
 
@@ -207,100 +189,40 @@ nav li:hover, nav li.active {
     color: white;
 }
 
-/* Markdown内容样式 */
 .article-detail {
-    background: white;
+    background: #2d3436;
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
     padding: 2.5rem;
     margin-bottom: 3rem;
-}
-
-.article-header {
-    margin-bottom: 2rem;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 1.5rem;
+    color: #ccc;
 }
 
 .article-header h1 {
-    font-size: 2.2rem;
-    margin-bottom: 0.5rem;
-    color: var(--dark-color);
-}
-
-.article-meta-large {
-    color: var(--secondary-color);
-    font-size: 1rem;
-    display: flex;
-    gap: 20px;
+    color: white;
 }
 
 .markdown-body {
     line-height: 1.8;
-    color: #444;
-}
-
-.markdown-body h1,
-.markdown-body h2,
-.markdown-body h3 {
-    margin-top: 2rem;
-    margin-bottom: 1rem;
-    color: var(--dark-color);
-}
-
-.markdown-body h1 {
-    border-bottom: 2px solid #eee;
-    padding-bottom: 0.5rem;
-}
-
-.markdown-body h2 {
-    border-bottom: 1px solid #eee;
-    padding-bottom: 0.3rem;
+    color: #ccc;
+    background: #1e1e1e;
 }
 
 .markdown-body p {
     margin-bottom: 1.2rem;
 }
 
-.markdown-body a {
-    color: var(--primary-color);
-    text-decoration: none;
-}
-
-.markdown-body a:hover {
-    text-decoration: underline;
-}
-
-.markdown-body code {
-    background: #f6f8fa;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-}
-
+.markdown-body code,
 .markdown-body pre {
     background: #2d2d2d;
-    color: #f8f8f2;
-    padding: 1.2rem;
-    border-radius: 6px;
-    overflow: auto;
-    margin: 1.5rem 0;
-    line-height: 1.5;
-}
-
-.markdown-body blockquote {
-    border-left: 4px solid var(--primary-color);
-    background: #f8f9ff;
-    padding: 1rem 1.5rem;
-    margin: 1.5rem 0;
-    border-radius: 0 6px 6px 0;
+    color: #eee;
 }
 
 .back-button {
     display: inline-flex;
     align-items: center;
     padding: 10px 20px;
-    background: #eef2ff;
+    background: #3a3a3a;
     color: var(--primary-color);
     border-radius: 30px;
     text-decoration: none;
@@ -316,27 +238,10 @@ nav li:hover, nav li.active {
     color: white;
 }
 
-/* 页脚样式 */
 footer {
     text-align: center;
     padding: 2rem 0;
     color: var(--secondary-color);
-    border-top: 1px solid #eee;
+    border-top: 1px solid #444;
     margin-top: 2rem;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-    .article-image {
-        height: 100px;
-        font-size: 1.2rem;
-    }
-
-    .article-content {
-        padding: 0.8rem;
-    }
-
-    .article-content h2 {
-        font-size: 1rem;
-    }
 }
