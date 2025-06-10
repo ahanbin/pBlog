@@ -322,6 +322,16 @@ nav li:hover, nav li.active {
     color: white;
 }
 
+.about-page {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.about-page h1, .about-page h2 {
+    color: #333;
+}
+
 /* 页脚样式 */
 footer {
     text-align: center;

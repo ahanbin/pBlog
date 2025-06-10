@@ -14,6 +14,8 @@
 4. 编写完成后，本地运行`generate-json.py`，会自动读取`article`目录下的文件到`data/article.json`中。
 5. 最后将这个目录上传到任意地方，用`nginx`帮个域名，就可以了。
 
+## 增加国际化支持
+
 - 在文件`config-site.json`中可以对网站做一些基本配置。
 
 ## 预览

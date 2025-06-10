@@ -1,7 +1,16 @@
 {
-  "title": "老韩的网站",
-  "subtitle": "分享能分享的一切事物",
-  "author": "老韩",
-  "copyright": "© 2025 老韩",
-  "beian": "备案号：陕ICP备2022014504号-1"
+  "zh": {
+    "title": "老韩的网站",
+    "subtitle": "分享能分享的一切事物",
+    "author": "老韩",
+    "copyright": "© 2025 老韩",
+    "beian": "备案号：陕ICP备2022014504号-1"
+  },
+  "en": {
+    "title": "LaoHan's Website",
+    "subtitle": "Share everything you can share",
+    "author": "LaoHan",
+    "copyright": "© 2025 LaoHan",
+    "beian": "ICP：陕ICP备2022014504号-1"
+  }
 }
