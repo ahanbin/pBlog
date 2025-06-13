@@ -1,10 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>{{ config.title || '个人网站' }</title>
+    <title>{{ config.title || '个人网站' }}</title>
     <!-- 引入Vue.js -->
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.0/dist/vue.global.prod.js"></script>
     <!-- 在Vue.js后引入marked -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link id="theme-css" rel="stylesheet" href="style/default.css">
@@ -32,9 +33,9 @@
                 @click="filterByCategory(category)">
                 {{ category }}
             </li>
-            <!-- 新增：关注页菜单 -->
+            <!-- 新增：关于页菜单 -->
             <li @click="goToAboutPage">
-                <div v-if="lang === 'zh'">关于</div>
+                <div v-if="lang.value === 'zh'">关于</div>
                 <div v-else>About</div>
             </li>
         </ul>
@@ -42,17 +43,13 @@
 
     <!-- 返回按钮 -->
     <button v-if="currentView === 'article'" @click="goBackToList" class="back-button">
-        <div v-if="lang=='zh'">
-            ← 返回文章列表
-        </div>
-        <div v-else>
-            ← Back to article list
-        </div>
+        <div v-if="lang === 'zh'">← 返回文章列表</div>
+        <div v-else>← Back to article list</div>
     </button>
 
     <!-- 文章列表 -->
     <section v-if="currentView === 'list'" id="article-list">
-        <div v-for="article in filteredArticles" class="article-card">
+        <div v-for="article in paginatedArticles" class="article-card">
             <div class="article-content">
                 <h2>
                     <a href="#" @click.prevent="loadAndRenderArticle(article.path)">
@@ -95,11 +92,11 @@
 
     <!-- 关于页 -->
     <section v-if="currentView === 'about'" class="about-page">
-        <h2 v-if="lang === 'zh'">关于</h2>
+        <h2 v-if="lang.value === 'zh'">关于</h2>
         <h2 v-else>About</h2>
         <div class="markdown-body" v-html="aboutContent"></div>
         <button @click="goBackToList">
-            <div v-if="lang === 'zh'">← 返回首页</div>
+            <div v-if="lang.value === 'zh'">← 返回首页</div>
             <div v-else>← Back to Home</div>
         </button>
     </section>
@@ -118,304 +115,254 @@
     </footer>
 </div>
 
-<script>
-    const {Vue} = window;
+<script type="module">    import { ref, onMounted, computed, createApp } from 'https://unpkg.com/vue@3.2.0/dist/vue.esm-browser.prod.js';
 
-    // 简化 marked 配置
-    marked.setOptions({
-        langPrefix: 'language-'
-    });
+window.marked.setOptions({
+    langPrefix: 'language-'
+});
 
-    new Vue({
-        el: '#app',
-        data: {
-            articles: [],
-            categories: [],
-            activeCategoryZh: '首页',
-            activeCategoryEn: 'Home',
-            currentView: 'list',
-            articleContent: '',
-            currentArticle: {},
-            currentArticlePath: null, // 当前文章路径
-            itemsPerPage: 5,
-            currentPage: 1,
-            aboutContent: '',     // 存储关于页的 Markdown 渲染内容
-            aboutPath: null,      // 当前加载的 About 文件路径
-            config: {},  // 用于存放从 JSON 加载的配置
-            lang: 'zh'   // 当前语言
-        },
-        computed: {
-            filteredArticles() {
-                const lang = localStorage.getItem('lang') || 'zh';
-                if (lang === 'zh') {
-                    if (this.activeCategoryZh === '首页') {
-                        return this.articles;
-                    }
-                    return this.articles.filter(article => article.category === this.activeCategoryZh);
-                } else {
-                    if (this.activeCategoryEn === 'Home') {
-                        return this.articles;
-                    }
-                    return this.articles.filter(article => article.category === this.activeCategoryEn);
-                }
-            },
-            paginatedArticles() {
-                const start = (this.currentPage - 1) * this.itemsPerPage;
-                const end = start + this.itemsPerPage;
-                return this.filteredArticles.slice(start, end);
-            },
-            totalPages() {
-                return Math.ceil(this.filteredArticles.length / this.itemsPerPage);
-            }
-        },
-        methods: {
-            changeTheme(themeName) {
-                console.log("切换主题为:", themeName);
-                const themeLink = document.getElementById('theme-css');
-                themeLink.href = `style/${themeName}.css`;
-                localStorage.setItem('selectedTheme', themeName);
-            },
-            goBackToList() {
-                this.currentView = 'list';
-                window.location.hash = ''; // 清除 hash
-            },
-            async handleHashChange() {
-                if (window.location.hash.startsWith('#article/')) {
-                    const path = decodeURIComponent(window.location.hash.slice(9));
-                    try {
-                        const response = await fetch(path);
-                        if (!response.ok) {
-                            await this.tryLoadFallbackArticle(path); // ❗尝试 fallback
-                            return;
-                        }
-                        const markdown = await response.text();
-                        this.articleContent = marked.parse(markdown);
-                        this.currentView = 'article';
+const articles = ref([]);
+const categories = ref([]);
+const activeCategoryZh = ref('首页');
+const activeCategoryEn = ref('Home');
+const currentView = ref('list');
+const articleContent = ref('');
+const currentArticle = ref({});
+const aboutContent = ref('');
+const currentPage = ref(1);
+const itemsPerPage = 5;
+const config = ref({
+    title: '个人网站',
+    subtitle: '默认副标题',
+    author: '老韩',
+    copyright: '© 默认版权',
+    beian: ''
+});
+const lang = ref(localStorage.getItem('lang') || 'zh');
 
-                        const article = this.articles.find(a => a.path === path);
-                        if (article) {
-                            this.currentArticle = article;
-                        }
-                    } catch (error) {
-                        console.error("加载文章失败", error);
-                        alert("加载文章内容失败");
-                    }
-                } else if (window.location.hash === '#about') {
-                    // 新增：处理关于页
-                    this.goToAboutPage();
-                } else {
-                    this.currentView = 'list';
-                }
-            },
-            showArticleByPath(path) {
-                const article = this.articles.find(a => a.path === path);
-                if (!article) {
-                    alert("文章不存在");
-                    return;
-                }
+// 过滤文章
+const filteredArticles = computed(() => {
+    const currentLang = lang.value;
+    if (currentLang === 'zh') {
+        return activeCategoryZh.value === '首页' ?
+            articles.value :
+            articles.value.filter(a => a.category === activeCategoryZh.value);
+    } else {
+        return activeCategoryEn.value === 'Home' ?
+            articles.value :
+            articles.value.filter(a => a.category === activeCategoryEn.value);
+    }
+});
 
-                fetch(path)
-                    .then(res => {
-                        if (!res.ok) throw new Error("加载失败");
-                        return res.text();
-                    })
-                    .then(markdown => {
-                        this.articleContent = marked.parse(markdown);
-                        this.currentArticle = article;
-                        this.currentView = 'article';
-                    })
-                    .catch(err => {
-                        console.error("加载失败", err);
-                        alert("加载文章内容失败");
-                    });
-            },
-            renderMarkdown(path) {
-                window.location.hash = `article/${encodeURIComponent(path)}`;
-            },
-            filterByCategory(category) {
-                const lang = localStorage.getItem('lang') || 'zh';
-                if (lang === 'zh') {
-                    this.activeCategoryZh = category;
-                } else {
-                    this.activeCategoryEn = category;
-                }
-                this.currentPage = 1;
-            },
-            formatDate(date) {
-                return new Date(date).toLocaleDateString();
-            },
-            async tryLoadFallbackArticle(originalPath) {
-                const langMap = {'zh': 'en', 'en': 'zh'};
-                const currentLang = this.lang;
-                const fallbackLang = langMap[currentLang];
+// 分页计算属性
+const totalPages = computed(() => Math.ceil(filteredArticles.value.length / itemsPerPage));
 
-                // 构造 fallback 路径（替换 data/zh -> data/en）
-                const fallbackPath = originalPath.replace(`/data/${currentLang}/`, `/data/${fallbackLang}/`);
+const paginatedArticles = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return filteredArticles.value.slice(start, start + itemsPerPage);
+});
 
-                try {
-                    const res = await fetch(fallbackPath);
-                    if (res.ok) {
-                        // 存在 fallback 版本
-                        this.articleContent = marked.parse(await res.text());
-                        this.currentArticlePath = fallbackPath;
-                        this.currentView = 'article';
-                        window.location.hash = `article/${encodeURIComponent(fallbackPath)}`;
-                        alert(`当前语言无此文章，已加载${fallbackLang === 'zh' ? '中文' : '英文'}版本`);
-                    } else {
-                        // 完全不存在该文章
-                        alert("该文章不存在");
-                        this.goBackToList();
-                    }
-                } catch (error) {
-                    console.error("加载 fallback 文章失败:", error);
-                    alert("加载文章失败");
-                }
-            },
-            async loadAndRenderArticle(path) {
-                console.log("正在加载文章:", path);
-                this.currentArticlePath = path;
-                try {
-                    const response = await fetch(path);
-                    if (!response.ok) throw new Error(`HTTP 错误! 状态码: ${response.status}`);
-                    const markdown = await response.text();
+function setPage(page) {
+    if (page >= 1 && page <= totalPages.value) currentPage.value = page;
+}
 
-                    this.articleContent = marked.parse(markdown);
-                    this.currentArticle = this.articles.find(article => article.path === path);
-                    this.currentView = 'article';
-                    window.location.hash = `article/${encodeURIComponent(path)}`;
-                } catch (error) {
-                    console.error('加载文章内容失败:', error);
-                    alert(`加载文章失败: ${error.message}`);
-                    throw error; // 抛出错误以便 catch 处理
-                }
-            },
-            async loadConfigAndArticles() {
-                try {
-                    const lang = localStorage.getItem('lang') || 'zh';
-                    const configRes = await fetch('./config-site.json');
-                    if (!configRes.ok) throw new Error("加载配置失败");
-                    const config = await configRes.json();
-                    this.config = config;
-                    console.log("加载配置成功", config);
-                    if (lang == 'zh') {
-                        this.config = config.zh;
-                    } else if (lang == 'en') {
-                        this.config = config.en;
-                    }
-                    document.title = config.title;
+function formatDate(date) {
+    return new Date(date).toLocaleDateString();
+}
 
-                    const subtitleEl = document.querySelector('header p');
-                    if (subtitleEl) {
-                        subtitleEl.textContent = config.subtitle;
-                    }
-                } catch (error) {
-                    console.error("加载配置失败:", error);
-                }
+function changeTheme(themeName) {
+    const themeLink = document.getElementById('theme-css');
+    if (themeLink) {
+        themeLink.href = `style/${themeName}.css`;
+        localStorage.setItem('selectedTheme', themeName);
+    }
+}
 
-                try {
-                    await this.loadArticles();
-                    this.handleHashChange();
-                    window.addEventListener('hashchange', this.handleHashChange);
-                } catch (error) {
-                    console.error("加载文章失败:", error);
-                }
-            },
-            async goToAboutPage() {
-                const lang = this.lang;
-                const filePath = lang === 'zh' ? 'article/zh/关于.md' : 'article/en/About.md';
+function goBackToList() {
+    currentView.value = 'list';
+    window.location.hash = '';
+}
 
-                try {
-                    const response = await fetch(filePath);
-                    if (!response.ok) throw new Error(`加载失败: ${filePath}`);
-
-                    const markdown = await response.text();
-                    this.aboutContent = marked.parse(markdown);
-                    this.currentView = 'about';
-                    this.aboutPath = filePath;
-                    window.location.hash = 'about';
-                } catch (error) {
-                    console.error("加载关于页失败:", error);
-                    alert("无法加载关于页");
-                }
-            },
-            async loadArticles() {
-                try {
-                    const lang = localStorage.getItem('lang') || 'zh';
-                    const response = await fetch(`data/${lang}/article.json`);
-                    const data = await response.json();
-
-                    // 过滤掉 "关于.md" 和 "About.md"
-                    this.articles = data
-                        .filter(a => !['关于.md', 'About.md'].includes(a.path))
-                        .sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
-
-                    const allCategories = [...new Set(data.map(a => a.category))];
-                    if (lang === 'zh') {
-                        this.categories = ['首页', ...allCategories];
-                    } else {
-                        this.categories = ['Home', ...allCategories];
-                    }
-
-                } catch (error) {
-                    console.error('加载文章失败:', error);
-                }
-            },
-            setPage(page) {
-                if (page >= 1 && page <= this.totalPages) {
-                    this.currentPage = page;
-                }
-            },
-            switchLang(newLang) {
-                console.log("切换语言为:", newLang);
-                localStorage.setItem('lang', newLang);
-                if (newLang === this.lang) {
-                    return;
-                }
-                // 先缓存当前状态
-                const wasOnArticlePage = this.currentView === 'article';
-                const currentArticlePath = this.currentArticlePath;
-
-                this.lang = newLang;
-                this.loadArticles();
-
-                // 如果当前处于文章详情页，则尝试加载对应语言的文章
-                console.log("currentView:", this.currentView);
-                console.log("currentArticlePath:", this.currentArticlePath);
-                if (wasOnArticlePage && currentArticlePath) {
-                    console.log("on article page.");
-                    const langMap = {'zh': 'en', 'en': 'zh'};
-                    const targetLang = newLang;
-                    const fallbackLang = langMap[targetLang];
-                    console.log(this.currentArticlePath);
-                    console.log(`/article/${this.lang}/`);
-                    console.log(`/article/${newLang}/`);
-                    console.log("targetLang:", targetLang);
-                    // 使用正则表达式替换路径中的语言部分
-                    const langRegex = /(.*\/)(zh|en)(\/.*)/;
-                    const targetPath = currentArticlePath.replace(langRegex, `$1${targetLang}$3`);
-
-                    // 尝试加载新语言的文章
-                    this.loadAndRenderArticle(targetPath).catch(() => {
-                        // 如果新语言文章不存在，尝试 fallback 回原语言
-                        this.loadAndRenderArticle(this.currentArticlePath);
-                        alert(`当前语言无此文章，已显示${fallbackLang === 'zh' ? '中文' : '英文'}版本`);
-                    });
-                } else {
-                    // 否则正常加载配置和文章
-                    this.loadConfigAndArticles();
-                }
-            }
-        },
-        mounted() {
-            const savedTheme = localStorage.getItem('selectedTheme') || 'default';
-            document.getElementById('theme-css').href = `style/${savedTheme}.css`;
-
-            const lang = localStorage.getItem('lang') || 'zh';
-            this.lang = lang;
-
-            this.loadConfigAndArticles();
+async function handleHashChange() {
+    if (window.location.hash.startsWith('#article/')) {
+        const path = decodeURIComponent(window.location.hash.slice(9));
+        try {
+            const response = await fetch(path);
+            if (!response.ok) throw new Error('加载失败');
+            const markdown = await response.text();
+            articleContent.value = marked.parse(markdown);
+            console.log('articleContent:', articleContent.value);
+            currentView.value = 'article';
+            const found = articles.value.find(a => a.path === path);
+            if (found) currentArticle.value = found;
+        } catch (e) {
+            alert('加载文章失败');
         }
-    });
+    } else if (window.location.hash === '#about') {
+        goToAboutPage();
+    } else {
+        currentView.value = 'list';
+    }
+}
+
+async function loadAndRenderArticle(path) {
+    try {
+        const res = await fetch(path);
+        if (!res.ok) {
+            await tryLoadFallbackArticle(path); // 尝试 fallback
+            return;
+        }
+        console.log("res:", res);
+        const md = await res.text();
+        console.log("md:", md);
+        articleContent.value = marked.parse(md);
+        currentView.value = 'article';
+        window.location.hash = `article/${encodeURIComponent(path)}`;
+        const found = articles.value.find(a => a.path === path);
+        console.log("found:", found);
+        if (found) currentArticle.value = found;
+    } catch (e) {
+        alert('加载文章失败');
+    }
+}
+
+async function tryLoadFallbackArticle(originalPath) {
+    const langMap = {'zh': 'en', 'en': 'zh'};
+    const currentLang = lang.value;
+    const fallbackLang = langMap[currentLang];
+    const fallbackPath = originalPath.replace(`/data/${currentLang}/`, `/data/${fallbackLang}/`);
+
+    try {
+        const res = await fetch(fallbackPath);
+        if (!res.ok) throw new Error('找不到 fallback 版本');
+        const md = await res.text();
+        articleContent.value = marked.parse(md);
+        currentView.value = 'article';
+        window.location.hash = `article/${encodeURIComponent(fallbackPath)}`;
+        alert(`当前语言无此文章，已加载${fallbackLang === 'zh' ? '中文' : '英文'}版本`);
+    } catch (e) {
+        alert('文章不存在');
+        goBackToList();
+    }
+}
+
+async function loadConfigAndArticles() {
+    try {
+        const langVal = lang.value;
+        const configRes = await fetch('./config-site.json');
+        const data = await configRes.json();
+
+        config.value = langVal === 'zh' ? { ...config, ...data.zh } : { ...config, ...data.en };
+
+        document.title = config.title;
+        const subtitleEl = document.querySelector('header p');
+        if (subtitleEl) subtitleEl.textContent = config.subtitle;
+
+        await loadArticles();
+        window.addEventListener('hashchange', handleHashChange);
+        handleHashChange();
+    } catch (e) {
+        alert('加载配置失败');
+    }
+}
+
+async function loadArticles() {
+    const langVal = lang.value;
+    const res = await fetch(`data/${langVal}/article.json`);
+    const data = await res.json();
+
+    articles.value = data
+        .filter(a => !['关于.md', 'About.md'].includes(a.path))
+        .sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
+    console.log("articles:", articles.value);
+    const allCategories = [...new Set(data.map(a => a.category))];
+    categories.value = langVal === 'zh' ? ['首页', ...allCategories] : ['Home', ...allCategories];
+}
+
+async function goToAboutPage() {
+    const langVal = lang.value;
+    const filePath = langVal === 'zh' ? 'article/zh/关于.md' : 'article/en/About.md';
+    try {
+        const res = await fetch(filePath);
+        if (!res.ok) throw new Error('加载失败');
+        const md = await res.text();
+        aboutContent.value = marked.parse(md);
+        currentView.value = 'about';
+        window.location.hash = 'about';
+    } catch (e) {
+        alert('加载关于页失败');
+    }
+}
+
+function switchLang(newLang) {
+    localStorage.setItem('lang', newLang);
+    lang.value = newLang;
+    console.log('切换语言为：', newLang);
+    console.log("currentView:", currentView.value);
+    console.log("currentArticle:", currentArticle.value);
+    if (currentView.value === 'article' && currentArticle.value.path) {
+        const langMap = {'zh': 'en', 'en': 'zh'};
+        const targetLang = newLang;
+        const fallbackLang = langMap[targetLang];
+        const langRegex = /(.*\/)(zh|en)(\/.*)/;
+        const targetPath = currentArticle.value.path.replace(langRegex, `$1${targetLang}$3`);
+
+        loadAndRenderArticle(targetPath).catch(() => {
+            // 如果目标语言不存在，显示 fallback
+            loadAndRenderArticle(currentArticle.value.path); // 可能失败，需确保 fallback
+            alert(`当前语言无此文章，已显示${fallbackLang === 'zh' ? '中文' : '英文'}版本`);
+        });
+    } else {
+        loadConfigAndArticles();
+    }
+}
+
+function filterByCategory(category) {
+    if (lang.value === 'zh') {
+        activeCategoryZh.value = category;
+    } else {
+        activeCategoryEn.value = category;
+    }
+    currentPage.value = 1;
+}
+
+const app = {
+    setup() {
+        onMounted(async () => {
+            const savedTheme = localStorage.getItem('selectedTheme') || 'default';
+            const themeLink = document.getElementById('theme-css');
+            if (themeLink) {
+                themeLink.href = `style/${savedTheme}.css`;
+            }
+            await loadConfigAndArticles();
+        });
+
+        return {
+            lang,
+            config,
+            categories,
+            currentView,
+            filteredArticles,
+            totalPages,
+            paginatedArticles,
+            currentPage,
+            articleContent,
+            currentArticle,
+            aboutContent,
+            formatDate,
+            setPage,
+            switchLang,
+            changeTheme,
+            goBackToList,
+            loadAndRenderArticle,
+            goToAboutPage,
+            filterByCategory
+        };
+    }
+};
+
+const vueApp = createApp(app);
+vueApp.mount('#app');
 </script>
 </body>
 </html>
